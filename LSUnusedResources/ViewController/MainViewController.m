@@ -396,8 +396,15 @@ static NSString * const kTableColumnFileSize       = @"FileSize";
     
     if (self.isFileDone && self.isStringDone) {
         NSArray *resNames = [[[ResourceFileSearcher sharedObject].resNameInfoDict allKeys] sortedArrayUsingSelector:@selector(localizedCaseInsensitiveCompare:)];
-        for (NSString *name in resNames) {
-            if (![[ResourceStringSearcher sharedObject] containsResourceName:name]) {
+				for (NSString *name in resNames) {
+
+						NSString *firstCapChar = [[name substringToIndex:1] lowercaseString];
+						NSString *lowerName = [name stringByReplacingCharactersInRange:NSMakeRange(0,1) withString:firstCapChar];
+
+						firstCapChar = [[name substringToIndex:1] uppercaseString];
+						NSString *upperName = [name stringByReplacingCharactersInRange:NSMakeRange(0,1) withString:firstCapChar];
+
+            if (![[ResourceStringSearcher sharedObject] containsResourceName:lowerName] && ![[ResourceStringSearcher sharedObject] containsResourceName:upperName]) {
                 if (!self.ignoreSimilarCheckbox.state
                     || ![[ResourceStringSearcher sharedObject] containsSimilarResourceName:name]) {
                     //TODO: if imageset name is A but contains png with name B, and using as B, should ignore A.imageset

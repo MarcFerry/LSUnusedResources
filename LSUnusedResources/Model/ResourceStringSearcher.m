@@ -183,52 +183,57 @@ typedef NS_ENUM(NSUInteger, LSFileType) {
         return;
     }
     
-    NSString *pattern = nil;
+    NSArray<NSString *> *patterns = nil;
     NSInteger groupIndex = -1;
     switch (fileType) {
         case LSFileTypeObjC:
-            pattern = @"@\"(.+?)\"";//@"imageNamed:@\"(.+)\"";//or: (imageNamed|contentOfFile):@\"(.*)\" // http://www.raywenderlich.com/30288/nsregularexpression-tutorial-and-cheat-sheet
+            patterns = @[@"@\"(.+?)\""];//@"imageNamed:@\"(.+)\"";//or: (imageNamed|contentOfFile):@\"(.*)\" // http://www.raywenderlich.com/30288/nsregularexpression-tutorial-and-cheat-sheet
             groupIndex = 1;
             break;
         case LSFileTypeSwift:
-            pattern = @"\"(.+?)\"";//@"named:\\s*\"(.+?)\"";//UIImage(named:"xx") or UIImage(named: "xx")
-            groupIndex = 1;
+            //pattern = @"\"(.+?)\"";//@"named:\\s*\"(.+?)\"";//UIImage(named:"xx") or UIImage(named: "xx")
+						//groupIndex = 1;
+						patterns = @[@"ImageAsset\..+?\.image", @"ImageAsset\..+?\.rawValue"];//@"named:\\s*\"(.+?)\"";//UIImage(named:"xx") or UIImage(named: "xx")
+						groupIndex = 0;
             break;
         case LSFileTypeXib:
-            pattern = @"image name=\"(.+?)\"";//image name="xx"
+            patterns = @[@"image name=\"(.+?)\""];//image name="xx"
             groupIndex = 1;
             break;
         case LSFileTypeHtml:
-            pattern = @"img\\s+src=[\"\'](.+?)[\"\']";//<img src="xx"> <img src='xx'>
+            patterns = @[@"img\\s+src=[\"\'](.+?)[\"\']"];//<img src="xx"> <img src='xx'>
             groupIndex = 1;
             break;
         case LSFileTypeJs:
-            pattern = @"[\"\']src[\"\'],\\s+[\"\'](.+?)[\"\']";// "src", "xx"> 'src', 'xx'>
+            patterns = @[@"[\"\']src[\"\'],\\s+[\"\'](.+?)[\"\']"];// "src", "xx"> 'src', 'xx'>
             groupIndex = 1;
             break;
         case LSFileTypeJson:
-            pattern = @":\\s+\"(.+?)\"";//"xx"
+            patterns = @[@":\\s+\"(.+?)\""];//"xx"
             groupIndex = 1;
             break;
         case LSFileTypePlist:
-            pattern = @">(.+?)<";//"<string>xx</string>"
+            patterns = @[@">(.+?)<"];//"<string>xx</string>"
             groupIndex = 1;
             break;
         case LSFileTypeCSS:
         case LSFileTypeH:
         case LSFileTypeC:
-            pattern = [NSString stringWithFormat:@"([a-zA-Z0-9_-]+)\\.(%@)", self.resSuffixs.count ? [self.resSuffixs componentsJoinedByString:@"|"] : @"png|gif|jpg|jpeg"]; //*.(png|gif|jpg|jpeg)
+            patterns = @[[NSString stringWithFormat:@"([a-zA-Z0-9_-]+)\\.(%@)", self.resSuffixs.count ? [self.resSuffixs componentsJoinedByString:@"|"] : @"png|gif|jpg|jpeg"]]; //*.(png|gif|jpg|jpeg)
             groupIndex = 1;
             break;
         case LSFileTypeStrings:
-            pattern = @"=\\s*\"(.+)\"\\s*;";
+            patterns = @[@"=\\s*\"(.+)\"\\s*;"];
             groupIndex = 1;
             break;
         default:
             break;
     }
-    if (pattern && groupIndex >= 0) {
-        NSArray *list = [self getMatchStringWithContent:content pattern:pattern groupIndex:groupIndex];
+		if ([patterns count] > 0 && groupIndex >= 0) {
+				NSMutableArray *list = [NSMutableArray new];
+				for (NSString *pattern in patterns) {
+						[list addObjectsFromArray:[self getMatchStringWithContent:content pattern:pattern groupIndex:groupIndex]];
+				}
         [self.resStringSet addObjectsFromArray:list];
     }
 }
@@ -242,8 +247,14 @@ typedef NS_ENUM(NSUInteger, LSFileType) {
         NSMutableArray *list = [NSMutableArray array];
         for (NSTextCheckingResult *checkingResult in matchs) {
             NSString *res = [content substringWithRange:[checkingResult rangeAtIndex:index]];
-            res = [res lastPathComponent];
-            res = [StringUtils stringByRemoveResourceSuffix:res];
+					if (index == 0) {
+						res = [res stringByReplacingOccurrencesOfString:@"ImageAsset." withString:@""];
+						res = [res stringByReplacingOccurrencesOfString:@".image" withString:@""];
+						res = [res stringByReplacingOccurrencesOfString:@".rawValue" withString:@""];
+					} else {
+						res = [res lastPathComponent];
+						res = [StringUtils stringByRemoveResourceSuffix:res];
+					}
             [list addObject:res];
         }
         return list;
